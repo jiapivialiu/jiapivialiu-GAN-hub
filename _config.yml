@@ -1,0 +1,14 @@
+# GitHub Pages configuration
+title: "GAN Introduction Slides"
+description: "Introduction to Generative Adversarial Networks with Python Implementation"
+theme: minima
+
+# Include all necessary files
+include:
+  - gan_introduction_files
+  - doc
+
+# Enable GitHub Pages
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
