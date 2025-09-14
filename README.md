@@ -6,8 +6,6 @@ An interactive presentation about Generative Adversarial Networks (GANs) with Py
 
 **Live Presentation**: [https://jiapivialiu.github.io/jiapivialiu-GAN-hub/](https://jiapivialiu.github.io/jiapivialiu-GAN-hub/)
 
-*Direct link to slides*: [https://jiapivialiu.github.io/jiapivialiu-GAN-hub/doc/slides/gan_introduction.html](https://jiapivialiu.github.io/jiapivialiu-GAN-hub/doc/slides/gan_introduction.html)
-
 ## 📋 What's Included
 
 The presentation covers:
