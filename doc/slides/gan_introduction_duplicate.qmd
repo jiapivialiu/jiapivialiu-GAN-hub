@@ -1,0 +1,1090 @@
+---
+title: "Introduction to Generative Adversarial Networks"
+subtitle: "Understanding GANs with Python Implementation"
+author: "Jiaping(Olivia) Liu"
+date: "September 14, 2025"
+format:
+  revealjs:
+    theme: simple
+    slide-number: true
+    chalkboard: true
+    preview-links: auto
+    css: styles.css
+    footer: "GAN Introduction - Python Demo"
+    transition: slide
+    background-transition: fade
+    highlight-style: github
+    fig-width: 10
+    fig-height: 4
+    fig-dpi: 150
+execute:
+  echo: true
+  warning: false
+  error: false
+  cache: false
+jupyter: python3
+---
+
+## What are GANs?
+
+::: {.incremental}
+- **Generative Adversarial Networks** - Deep learning architecture
+- Introduced by Ian Goodfellow in 2014
+- Two neural networks competing against each other
+- **Generator**: Creates fake data
+- **Discriminator**: Distinguishes real from fake data
+- Training through adversarial process
+:::
+
+## Visualization Demo: 2D Distribution Learning Progression
+
+```{python}
+#| echo: false
+#| fig-width: 16
+#| fig-height: 6
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.stats import multivariate_normal
+
+# Configure matplotlib for light theme
+plt.style.use('default')
+plt.rcParams['figure.facecolor'] = 'white'
+plt.rcParams['axes.facecolor'] = 'white'
+
+# Create a visualization showing learning progression
+fig, axes = plt.subplots(2, 3, figsize=(16, 6))
+
+# Real data distribution (target) - rightmost
+mean_real = [2, 2]
+cov_real = [[1, 0.5], [0.5, 1]]
+x = np.linspace(-1, 5, 100)
+y = np.linspace(-1, 5, 100)
+X, Y = np.meshgrid(x, y)
+pos = np.dstack((X, Y))
+rv_real = multivariate_normal(mean_real, cov_real)
+
+# Initial generator distribution (leftmost)
+mean_fake_init = [0, 0]
+cov_fake_init = [[2.5, 0], [0, 2.5]]
+rv_fake_init = multivariate_normal(mean_fake_init, cov_fake_init)
+
+# Learning stages - progressive improvement
+learning_stages = [
+    # Stage 1: Initial (leftmost)
+    {"mean": [0, 0], "cov": [[2.5, 0], [0, 2.5]], "title": "Initial\n(Epoch 0)", "color": "#d1242f"},
+    # Stage 2: Early learning
+    {"mean": [0.5, 0.3], "cov": [[2.2, 0.1], [0.1, 2.2]], "title": "Early Learning\n(Epoch 100)", "color": "#e17055"},
+    # Stage 3: Mid learning
+    {"mean": [1.0, 0.8], "cov": [[1.9, 0.2], [0.2, 1.9]], "title": "Mid Training\n(Epoch 300)", "color": "#fdcb6e"},
+    # Stage 4: Advanced learning
+    {"mean": [1.4, 1.3], "cov": [[1.6, 0.3], [0.3, 1.6]], "title": "Advanced\n(Epoch 600)", "color": "#a29bfe"},
+    # Stage 5: Near convergence
+    {"mean": [1.7, 1.7], "cov": [[1.3, 0.4], [0.4, 1.3]], "title": "Converging\n(Epoch 900)", "color": "#74b9ff"},
+    # Stage 6: Final (real data)
+    {"mean": [2, 2], "cov": [[1, 0.5], [0.5, 1]], "title": "Real Data\n(Target)", "color": "#0984e3"}
+]
+
+for i, stage in enumerate(learning_stages):
+    # Calculate row and column for 2x3 grid
+    row = i // 3
+    col = i % 3
+    ax = axes[row, col]
+    
+    rv_stage = multivariate_normal(stage["mean"], stage["cov"])
+    
+    if i == 0:  # Initial generator (top-left) - no background
+        ax.contour(X, Y, rv_stage.pdf(pos), colors=stage["color"], alpha=0.8, linewidths=2)
+    elif i == 5:  # Real data (bottom-right) - no background
+        ax.contour(X, Y, rv_stage.pdf(pos), colors=stage["color"], alpha=0.9, linewidths=2)
+    else:  # Middle stages - add real data as background
+        # Add real data distribution as light background
+        ax.contour(X, Y, rv_real.pdf(pos), colors='#0984e3', alpha=0.3, linewidths=1, linestyles='--')
+        # Add current generator stage on top
+        ax.contour(X, Y, rv_stage.pdf(pos), colors=stage["color"], alpha=0.8, linewidths=2)
+    
+    ax.set_title(stage["title"], color='black', fontsize=12)
+    ax.set_xlim(-1, 5)
+    ax.set_ylim(-1, 5)
+    ax.grid(True, alpha=0.3)
+    ax.tick_params(colors='black', labelsize=9)
+    
+    # Add labels to left column and bottom row
+    if col == 0:  # Left column
+        ax.set_ylabel('X2', color='black', fontsize=10)
+    if row == 1:  # Bottom row
+        ax.set_xlabel('X1', color='black', fontsize=10)
+
+plt.tight_layout()
+plt.subplots_adjust(wspace=0.1)
+plt.show()
+```
+
+## GAN Architecture
+
+::: {.columns}
+
+::: {.column width="50%"}
+### Generator Network
+- Takes random noise as input
+- Transforms noise into realistic data
+- Goal: Fool the discriminator
+- Trained to minimize detection
+:::
+
+::: {.column width="50%"}
+### Discriminator Network
+- Takes real and fake data
+- Outputs probability (real vs fake)
+- Goal: Correctly classify data
+- Trained to maximize accuracy
+:::
+
+:::
+
+## Mathematical Foundation
+
+The GAN objective function:
+
+$$\min_G \max_D V(D,G) = \mathbb{E}_{x \sim p_{data}(x)}[\log D(x)] + \mathbb{E}_{z \sim p_z(z)}[\log(1 - D(G(z)))]$$
+
+Where:
+- $G$ = Generator network
+- $D$ = Discriminator network  
+- $x$ = Real data samples
+- $z$ = Random noise vector
+
+
+## The GAN Game Theory
+
+```{python}
+#| echo: false
+#| fig-width: 10
+#| fig-height: 6
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Configure matplotlib for light theme
+plt.style.use('default')
+plt.rcParams['figure.facecolor'] = 'white'
+plt.rcParams['axes.facecolor'] = 'white'
+
+# Visualize the adversarial game
+fig_game, ax_game = plt.subplots(1, 1, figsize=(10, 6))
+
+# Create sample data for visualization
+x = np.linspace(0, 10, 100)
+generator_loss = 5 * np.exp(-0.3 * x) + np.random.normal(0, 0.1, 100)
+discriminator_loss = 3 * np.exp(-0.2 * x) + np.random.normal(0, 0.1, 100)
+
+ax_game.plot(x, generator_loss, label='Generator Loss', linewidth=2, color='#0969da')
+ax_game.plot(x, discriminator_loss, label='Discriminator Loss', linewidth=2, color='#d1242f')
+ax_game.set_xlabel('Training Epochs', color='black')
+ax_game.set_ylabel('Loss', color='black')
+ax_game.set_title('GAN Training Dynamics', color='black')
+ax_game.legend()
+ax_game.grid(True, alpha=0.3)
+ax_game.tick_params(colors='black')
+plt.tight_layout()
+plt.show()
+```
+
+
+## Applications
+
+```{python}
+#| echo: false
+#| fig-width: 12
+#| fig-height: 6
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Create a demonstration of GAN applications
+fig, axes = plt.subplots(2, 2, figsize=(12, 6))
+
+# Image generation simulation
+np.random.seed(123)
+fake_image = np.random.rand(64, 64, 3)
+fake_image = np.clip(fake_image + 0.3 * np.sin(np.linspace(0, 10, 64))[None, :, None], 0, 1)
+
+axes[0, 0].imshow(fake_image)
+axes[0, 0].set_title('Image Generation', color='black')
+axes[0, 0].axis('off')
+
+# Data augmentation visualization
+x = np.linspace(0, 4*np.pi, 100)
+original_signal = np.sin(x) + 0.1 * np.random.randn(100)
+augmented_signal1 = np.sin(x + 0.5) + 0.1 * np.random.randn(100)
+augmented_signal2 = 1.2 * np.sin(x) + 0.1 * np.random.randn(100)
+
+axes[0, 1].plot(x, original_signal, label='Original', linewidth=2, color='#0969da')
+axes[0, 1].plot(x, augmented_signal1, label='Augmented 1', linewidth=2, alpha=0.7, color='#2c5530')
+axes[0, 1].plot(x, augmented_signal2, label='Augmented 2', linewidth=2, alpha=0.7, color='#d1242f')
+axes[0, 1].set_title('Data Augmentation', color='black')
+axes[0, 1].legend()
+axes[0, 1].grid(True, alpha=0.3)
+axes[0, 1].tick_params(colors='black')
+
+# Style transfer simulation
+original_pattern = np.zeros((50, 50))
+for i in range(50):
+    for j in range(50):
+        original_pattern[i, j] = np.sin(0.3 * i) * np.cos(0.3 * j)
+
+style_pattern = np.zeros((50, 50))
+for i in range(50):
+    for j in range(50):
+        style_pattern[i, j] = np.sin(0.1 * i + 0.2 * j)
+
+# Create style transfer result by combining content and style
+transfer_result = 0.7 * original_pattern + 0.3 * style_pattern
+
+axes[1, 0].imshow(original_pattern, cmap='viridis')
+axes[1, 0].set_title('Original Content', color='black')
+axes[1, 0].axis('off')
+
+axes[1, 1].imshow(transfer_result, cmap='plasma')
+axes[1, 1].set_title('Style Transfer Result', color='black')
+axes[1, 1].axis('off')
+
+#axes[0, 1].legend()
+#axes[0, 1].grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
+```
+
+## Training Challenges
+
+::: {.incremental}
+- **Mode Collapse**: Generator produces limited variety
+- **Training Instability**: Oscillating losses
+- **Vanishing Gradients**: Poor gradient flow
+- **Nash Equilibrium**: Difficult to reach balance
+:::
+
+::: {.fragment}
+```{python}
+#| echo: false
+#| fig-width: 12
+#| fig-height: 4
+# Demonstrate mode collapse
+fig_mode, axes_mode = plt.subplots(1, 2, figsize=(12, 4))
+
+# Normal training
+np.random.seed(42)
+normal_samples = np.random.multivariate_normal([0, 0], [[1, 0], [0, 1]], 500)
+axes_mode[0].scatter(normal_samples[:, 0], normal_samples[:, 1], alpha=0.6, s=20, color='#0969da')
+axes_mode[0].set_title('Healthy GAN: Diverse Samples', color='black')
+axes_mode[0].set_xlim(-4, 4)
+axes_mode[0].set_ylim(-4, 4)
+axes_mode[0].grid(True, alpha=0.3)
+axes_mode[0].tick_params(colors='black')
+
+# Mode collapse
+collapsed_samples = np.random.normal(1, 0.1, (500, 2))
+axes_mode[1].scatter(collapsed_samples[:, 0], collapsed_samples[:, 1], alpha=0.6, s=20, color='#d1242f')
+axes_mode[1].set_title('Mode Collapse: Limited Diversity', color='black')
+axes_mode[1].set_xlim(-4, 4)
+axes_mode[1].set_ylim(-4, 4)
+axes_mode[1].grid(True, alpha=0.3)
+axes_mode[1].tick_params(colors='black')
+
+plt.tight_layout()
+plt.show()
+```
+:::
+
+## GAN Variants
+
+::: {.columns}
+
+::: {.column width="50%"}
+### Popular Architectures
+- **DCGAN**: Deep Convolutional GAN
+- **StyleGAN**: Style-based Generator
+- **CycleGAN**: Unpaired Image Translation
+- **Pix2Pix**: Paired Image Translation
+:::
+
+::: {.column width="50%"}
+### Improved Training
+- **WGAN**: Wasserstein GAN
+- **LSGAN**: Least Squares GAN
+- **Progressive GAN**: Progressive Growing
+- **Self-Attention GAN**: SAGAN
+:::
+
+:::
+
+## Performance Evaluation
+
+```{python}
+#| echo: false
+#| fig-width: 14
+#| fig-height: 4
+# Metrics for GAN evaluation
+import matplotlib.pyplot as plt
+import numpy as np
+
+fig_perf, axes_perf = plt.subplots(1, 2, figsize=(14, 4))
+
+# Inception Score simulation
+epochs = np.arange(1, 101)
+is_scores = 2 + 3 * (1 - np.exp(-epochs/30)) + 0.3 * np.random.randn(100)
+is_scores = np.clip(is_scores, 1, 8)
+
+axes_perf[0].plot(epochs, is_scores, linewidth=2, color='#2c5530')
+axes_perf[0].set_xlabel('Epochs', color='black')
+axes_perf[0].set_ylabel('Inception Score', color='black')
+axes_perf[0].set_title('Inception Score Over Training', color='black')
+axes_perf[0].grid(True, alpha=0.3)
+axes_perf[0].axhline(y=5, color='#d1242f', linestyle='--', alpha=0.7, label='Target Score')
+axes_perf[0].legend()
+axes_perf[0].tick_params(colors='black')
+
+# FID Score simulation
+fid_scores = 150 * np.exp(-epochs/40) + 10 + 5 * np.random.randn(100)
+fid_scores = np.clip(fid_scores, 5, 200)
+
+axes_perf[1].plot(epochs, fid_scores, linewidth=2, color='#8250df')
+axes_perf[1].set_xlabel('Epochs', color='black')
+axes_perf[1].set_ylabel('FID Score', color='black')
+axes_perf[1].set_title('FID Score Over Training (Lower is Better)', color='black')
+axes_perf[1].grid(True, alpha=0.3)
+axes_perf[1].axhline(y=20, color='#d1242f', linestyle='--', alpha=0.7, label='Good Score Threshold')
+axes_perf[1].legend()
+axes_perf[1].tick_params(colors='black')
+
+plt.tight_layout()
+plt.show()
+```
+
+## Tips for Successful GAN Training
+
+::: {.incremental}
+1. **Balance the Networks**: Similar capacity for G and D
+2. **Learning Rate Scheduling**: Careful tuning required
+3. **Batch Normalization**: Stabilizes training
+4. **Leaky ReLU**: Better gradients than standard ReLU
+5. **Feature Matching**: Alternative loss functions
+6. **Historical Averaging**: Prevent oscillations
+7. **Monitor Metrics**: Track IS, FID, visual quality
+:::
+
+## Resources and Next Steps
+
+::: {.columns}
+
+::: {.column width="50%"}
+### Further Reading
+- Original GAN Paper (Goodfellow et al., 2014)
+- DCGAN Paper (Radford et al., 2015)
+- Progressive GAN (Karras et al., 2017)
+- StyleGAN Series (Karras et al.)
+:::
+
+::: {.column width="50%"}
+### Practical Implementation
+- PyTorch GAN tutorials
+- TensorFlow GAN library
+- Papers with Code implementations
+- Kaggle competitions
+:::
+
+:::
+
+---
+
+## Key Takeaways
+- GANs learn through adversarial competition
+- Generator creates, Discriminator evaluates  
+- Applications span from art to data augmentation
+- Training requires careful balance and monitoring
+
+### Questions & Discussion
+
+
+# Appendix
+
+## Simple GAN Implementation
+
+```{python}
+#| echo: true
+#| eval: false
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import numpy as np
+
+class Generator(nn.Module):
+    def __init__(self, latent_dim, output_dim):
+        super(Generator, self).__init__()
+        self.model = nn.Sequential(
+            nn.Linear(latent_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, 256),
+            nn.ReLU(),
+            nn.Linear(256, output_dim),
+            nn.Tanh()
+        )
+    
+    def forward(self, z):
+        return self.model(z)
+
+class Discriminator(nn.Module):
+    def __init__(self, input_dim):
+        super(Discriminator, self).__init__()
+        self.model = nn.Sequential(
+            nn.Linear(input_dim, 256),
+            nn.LeakyReLU(0.2),
+            nn.Linear(256, 128),
+            nn.LeakyReLU(0.2),
+            nn.Linear(128, 1),
+            nn.Sigmoid()
+        )
+    
+    def forward(self, x):
+        return self.model(x)
+```
+
+## Training Process Demo
+
+```{python}
+#| echo: true
+#| eval: false
+# Initialize networks
+latent_dim = 100
+data_dim = 2
+
+generator = Generator(latent_dim, data_dim)
+discriminator = Discriminator(data_dim)
+
+# Optimizers
+lr = 0.0002
+g_optimizer = optim.Adam(generator.parameters(), lr=lr)
+d_optimizer = optim.Adam(discriminator.parameters(), lr=lr)
+
+# Loss function
+criterion = nn.BCELoss()
+
+# Training loop (simplified)
+def train_gan(epochs=1000):
+    for epoch in range(epochs):
+        # Train Discriminator
+        real_data = generate_real_samples()  # Your real data
+        fake_data = generator(torch.randn(batch_size, latent_dim))
+        
+        d_loss_real = criterion(discriminator(real_data), torch.ones(batch_size, 1))
+        d_loss_fake = criterion(discriminator(fake_data.detach()), torch.zeros(batch_size, 1))
+        d_loss = d_loss_real + d_loss_fake
+        
+        d_optimizer.zero_grad()
+        d_loss.backward()
+        d_optimizer.step()
+        
+        # Train Generator
+        fake_data = generator(torch.randn(batch_size, latent_dim))
+        g_loss = criterion(discriminator(fake_data), torch.ones(batch_size, 1))
+        
+        g_optimizer.zero_grad()
+        g_loss.backward()
+        g_optimizer.step()
+        
+        return d_loss.item(), g_loss.item()
+```
+## Code Structure for Practice
+
+```{python}
+#| echo: true
+#| eval: false
+# Complete GAN training pipeline
+class GANTrainer:
+    def __init__(self, generator, discriminator, device='cpu'):
+        self.generator = generator.to(device)
+        self.discriminator = discriminator.to(device)
+        self.device = device
+        
+        # Initialize optimizers
+        self.g_optimizer = optim.Adam(generator.parameters(), lr=0.0002, betas=(0.5, 0.999))
+        self.d_optimizer = optim.Adam(discriminator.parameters(), lr=0.0002, betas=(0.5, 0.999))
+        
+        self.criterion = nn.BCELoss()
+        
+    def train_step(self, real_data, batch_size, latent_dim):
+        # Training step implementation
+        device = self.device
+        
+        # Labels
+        real_labels = torch.ones(batch_size, 1).to(device)
+        fake_labels = torch.zeros(batch_size, 1).to(device)
+        
+        # Train Discriminator
+        self.discriminator.zero_grad()
+        
+        # Real data
+        real_output = self.discriminator(real_data)
+        d_loss_real = self.criterion(real_output, real_labels)
+        
+        # Fake data
+        noise = torch.randn(batch_size, latent_dim).to(device)
+        fake_data = self.generator(noise)
+        fake_output = self.discriminator(fake_data.detach())
+        d_loss_fake = self.criterion(fake_output, fake_labels)
+        
+        d_loss = d_loss_real + d_loss_fake
+        d_loss.backward()
+        self.d_optimizer.step()
+        
+        # Train Generator
+        self.generator.zero_grad()
+        fake_output = self.discriminator(fake_data)
+        g_loss = self.criterion(fake_output, real_labels)
+        g_loss.backward()
+        self.g_optimizer.step()
+        
+        return d_loss.item(), g_loss.item()
+```
+---
+title: "Introduction to Generative Adversarial Networks"
+subtitle: "Understanding GANs with Python Implementation"
+author: "Jiaping(Olivia) Liu"
+date: "September 14, 2025"
+format:
+  revealjs:
+    theme: simple
+    slide-number: true
+    chalkboard: true
+    preview-links: auto
+    css: styles.css
+    footer: "GAN Introduction - Python Demo"
+    transition: slide
+    background-transition: fade
+    highlight-style: github
+    fig-width: 10
+    fig-height: 4
+    fig-dpi: 150
+execute:
+  echo: true
+  warning: false
+  error: false
+  cache: false
+jupyter: python3
+---
+
+## What are GANs?
+
+::: {.incremental}
+- **Generative Adversarial Networks** - Deep learning architecture
+- Introduced by Ian Goodfellow in 2014
+- Two neural networks competing against each other
+- **Generator**: Creates fake data
+- **Discriminator**: Distinguishes real from fake data
+- Training through adversarial process
+:::
+
+## Visualization Demo: 2D Distribution Learning Progression
+
+```{python}
+#| echo: false
+#| fig-width: 16
+#| fig-height: 6
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.stats import multivariate_normal
+
+# Configure matplotlib for light theme
+plt.style.use('default')
+plt.rcParams['figure.facecolor'] = 'white'
+plt.rcParams['axes.facecolor'] = 'white'
+
+# Create a visualization showing learning progression
+fig, axes = plt.subplots(2, 3, figsize=(16, 6))
+
+# Real data distribution (target) - rightmost
+mean_real = [2, 2]
+cov_real = [[1, 0.5], [0.5, 1]]
+x = np.linspace(-1, 5, 100)
+y = np.linspace(-1, 5, 100)
+X, Y = np.meshgrid(x, y)
+pos = np.dstack((X, Y))
+rv_real = multivariate_normal(mean_real, cov_real)
+
+# Initial generator distribution (leftmost)
+mean_fake_init = [0, 0]
+cov_fake_init = [[2.5, 0], [0, 2.5]]
+rv_fake_init = multivariate_normal(mean_fake_init, cov_fake_init)
+
+# Learning stages - progressive improvement
+learning_stages = [
+    # Stage 1: Initial (leftmost)
+    {"mean": [0, 0], "cov": [[2.5, 0], [0, 2.5]], "title": "Initial\n(Epoch 0)", "color": "#d1242f"},
+    # Stage 2: Early learning
+    {"mean": [0.5, 0.3], "cov": [[2.2, 0.1], [0.1, 2.2]], "title": "Early Learning\n(Epoch 100)", "color": "#e17055"},
+    # Stage 3: Mid learning
+    {"mean": [1.0, 0.8], "cov": [[1.9, 0.2], [0.2, 1.9]], "title": "Mid Training\n(Epoch 300)", "color": "#fdcb6e"},
+    # Stage 4: Advanced learning
+    {"mean": [1.4, 1.3], "cov": [[1.6, 0.3], [0.3, 1.6]], "title": "Advanced\n(Epoch 600)", "color": "#a29bfe"},
+    # Stage 5: Near convergence
+    {"mean": [1.7, 1.7], "cov": [[1.3, 0.4], [0.4, 1.3]], "title": "Converging\n(Epoch 900)", "color": "#74b9ff"},
+    # Stage 6: Final (real data)
+    {"mean": [2, 2], "cov": [[1, 0.5], [0.5, 1]], "title": "Real Data\n(Target)", "color": "#0984e3"}
+]
+
+for i, stage in enumerate(learning_stages):
+    # Calculate row and column for 2x3 grid
+    row = i // 3
+    col = i % 3
+    ax = axes[row, col]
+    
+    rv_stage = multivariate_normal(stage["mean"], stage["cov"])
+    
+    if i == 0:  # Initial generator (top-left) - no background
+        ax.contour(X, Y, rv_stage.pdf(pos), colors=stage["color"], alpha=0.8, linewidths=2)
+    elif i == 5:  # Real data (bottom-right) - no background
+        ax.contour(X, Y, rv_stage.pdf(pos), colors=stage["color"], alpha=0.9, linewidths=2)
+    else:  # Middle stages - add real data as background
+        # Add real data distribution as light background
+        ax.contour(X, Y, rv_real.pdf(pos), colors='#0984e3', alpha=0.3, linewidths=1, linestyles='--')
+        # Add current generator stage on top
+        ax.contour(X, Y, rv_stage.pdf(pos), colors=stage["color"], alpha=0.8, linewidths=2)
+    
+    ax.set_title(stage["title"], color='black', fontsize=12)
+    ax.set_xlim(-1, 5)
+    ax.set_ylim(-1, 5)
+    ax.grid(True, alpha=0.3)
+    ax.tick_params(colors='black', labelsize=9)
+    
+    # Add labels to left column and bottom row
+    if col == 0:  # Left column
+        ax.set_ylabel('X2', color='black', fontsize=10)
+    if row == 1:  # Bottom row
+        ax.set_xlabel('X1', color='black', fontsize=10)
+
+plt.tight_layout()
+plt.subplots_adjust(wspace=0.1)
+plt.show()
+```
+
+## GAN Architecture
+
+::: {.columns}
+
+::: {.column width="50%"}
+### Generator Network
+- Takes random noise as input
+- Transforms noise into realistic data
+- Goal: Fool the discriminator
+- Trained to minimize detection
+:::
+
+::: {.column width="50%"}
+### Discriminator Network
+- Takes real and fake data
+- Outputs probability (real vs fake)
+- Goal: Correctly classify data
+- Trained to maximize accuracy
+:::
+
+:::
+
+## Mathematical Foundation
+
+The GAN objective function:
+
+$$\min_G \max_D V(D,G) = \mathbb{E}_{x \sim p_{data}(x)}[\log D(x)] + \mathbb{E}_{z \sim p_z(z)}[\log(1 - D(G(z)))]$$
+
+Where:
+- $G$ = Generator network
+- $D$ = Discriminator network  
+- $x$ = Real data samples
+- $z$ = Random noise vector
+
+
+## The GAN Game Theory
+
+```{python}
+#| echo: false
+#| fig-width: 10
+#| fig-height: 6
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Configure matplotlib for light theme
+plt.style.use('default')
+plt.rcParams['figure.facecolor'] = 'white'
+plt.rcParams['axes.facecolor'] = 'white'
+
+# Visualize the adversarial game
+fig_game, ax_game = plt.subplots(1, 1, figsize=(10, 6))
+
+# Create sample data for visualization
+x = np.linspace(0, 10, 100)
+generator_loss = 5 * np.exp(-0.3 * x) + np.random.normal(0, 0.1, 100)
+discriminator_loss = 3 * np.exp(-0.2 * x) + np.random.normal(0, 0.1, 100)
+
+ax_game.plot(x, generator_loss, label='Generator Loss', linewidth=2, color='#0969da')
+ax_game.plot(x, discriminator_loss, label='Discriminator Loss', linewidth=2, color='#d1242f')
+ax_game.set_xlabel('Training Epochs', color='black')
+ax_game.set_ylabel('Loss', color='black')
+ax_game.set_title('GAN Training Dynamics', color='black')
+ax_game.legend()
+ax_game.grid(True, alpha=0.3)
+ax_game.tick_params(colors='black')
+plt.tight_layout()
+plt.show()
+```
+
+
+## Applications
+
+```{python}
+#| echo: false
+#| fig-width: 12
+#| fig-height: 6
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Create a demonstration of GAN applications
+fig, axes = plt.subplots(2, 2, figsize=(12, 6))
+
+# Image generation simulation
+np.random.seed(123)
+fake_image = np.random.rand(64, 64, 3)
+fake_image = np.clip(fake_image + 0.3 * np.sin(np.linspace(0, 10, 64))[None, :, None], 0, 1)
+
+axes[0, 0].imshow(fake_image)
+axes[0, 0].set_title('Image Generation', color='black')
+axes[0, 0].axis('off')
+
+# Data augmentation visualization
+x = np.linspace(0, 4*np.pi, 100)
+original_signal = np.sin(x) + 0.1 * np.random.randn(100)
+augmented_signal1 = np.sin(x + 0.5) + 0.1 * np.random.randn(100)
+augmented_signal2 = 1.2 * np.sin(x) + 0.1 * np.random.randn(100)
+
+axes[0, 1].plot(x, original_signal, label='Original', linewidth=2, color='#0969da')
+axes[0, 1].plot(x, augmented_signal1, label='Augmented 1', linewidth=2, alpha=0.7, color='#2c5530')
+axes[0, 1].plot(x, augmented_signal2, label='Augmented 2', linewidth=2, alpha=0.7, color='#d1242f')
+axes[0, 1].set_title('Data Augmentation', color='black')
+axes[0, 1].legend()
+axes[0, 1].grid(True, alpha=0.3)
+axes[0, 1].tick_params(colors='black')
+
+# Style transfer simulation
+original_pattern = np.zeros((50, 50))
+for i in range(50):
+    for j in range(50):
+        original_pattern[i, j] = np.sin(0.3 * i) * np.cos(0.3 * j)
+
+style_pattern = np.zeros((50, 50))
+for i in range(50):
+    for j in range(50):
+        style_pattern[i, j] = np.sin(0.1 * i + 0.2 * j)
+
+# Create style transfer result by combining content and style
+transfer_result = 0.7 * original_pattern + 0.3 * style_pattern
+
+axes[1, 0].imshow(original_pattern, cmap='viridis')
+axes[1, 0].set_title('Original Content', color='black')
+axes[1, 0].axis('off')
+
+axes[1, 1].imshow(transfer_result, cmap='plasma')
+axes[1, 1].set_title('Style Transfer Result', color='black')
+axes[1, 1].axis('off')
+
+#axes[0, 1].legend()
+#axes[0, 1].grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
+```
+
+## Training Challenges
+
+::: {.incremental}
+- **Mode Collapse**: Generator produces limited variety
+- **Training Instability**: Oscillating losses
+- **Vanishing Gradients**: Poor gradient flow
+- **Nash Equilibrium**: Difficult to reach balance
+:::
+
+::: {.fragment}
+```{python}
+#| echo: false
+#| fig-width: 12
+#| fig-height: 4
+# Demonstrate mode collapse
+fig_mode, axes_mode = plt.subplots(1, 2, figsize=(12, 4))
+
+# Normal training
+np.random.seed(42)
+normal_samples = np.random.multivariate_normal([0, 0], [[1, 0], [0, 1]], 500)
+axes_mode[0].scatter(normal_samples[:, 0], normal_samples[:, 1], alpha=0.6, s=20, color='#0969da')
+axes_mode[0].set_title('Healthy GAN: Diverse Samples', color='black')
+axes_mode[0].set_xlim(-4, 4)
+axes_mode[0].set_ylim(-4, 4)
+axes_mode[0].grid(True, alpha=0.3)
+axes_mode[0].tick_params(colors='black')
+
+# Mode collapse
+collapsed_samples = np.random.normal(1, 0.1, (500, 2))
+axes_mode[1].scatter(collapsed_samples[:, 0], collapsed_samples[:, 1], alpha=0.6, s=20, color='#d1242f')
+axes_mode[1].set_title('Mode Collapse: Limited Diversity', color='black')
+axes_mode[1].set_xlim(-4, 4)
+axes_mode[1].set_ylim(-4, 4)
+axes_mode[1].grid(True, alpha=0.3)
+axes_mode[1].tick_params(colors='black')
+
+plt.tight_layout()
+plt.show()
+```
+:::
+
+## GAN Variants
+
+::: {.columns}
+
+::: {.column width="50%"}
+### Popular Architectures
+- **DCGAN**: Deep Convolutional GAN
+- **StyleGAN**: Style-based Generator
+- **CycleGAN**: Unpaired Image Translation
+- **Pix2Pix**: Paired Image Translation
+:::
+
+::: {.column width="50%"}
+### Improved Training
+- **WGAN**: Wasserstein GAN
+- **LSGAN**: Least Squares GAN
+- **Progressive GAN**: Progressive Growing
+- **Self-Attention GAN**: SAGAN
+:::
+
+:::
+
+## Performance Evaluation
+
+```{python}
+#| echo: false
+#| fig-width: 14
+#| fig-height: 4
+# Metrics for GAN evaluation
+import matplotlib.pyplot as plt
+import numpy as np
+
+fig_perf, axes_perf = plt.subplots(1, 2, figsize=(14, 4))
+
+# Inception Score simulation
+epochs = np.arange(1, 101)
+is_scores = 2 + 3 * (1 - np.exp(-epochs/30)) + 0.3 * np.random.randn(100)
+is_scores = np.clip(is_scores, 1, 8)
+
+axes_perf[0].plot(epochs, is_scores, linewidth=2, color='#2c5530')
+axes_perf[0].set_xlabel('Epochs', color='black')
+axes_perf[0].set_ylabel('Inception Score', color='black')
+axes_perf[0].set_title('Inception Score Over Training', color='black')
+axes_perf[0].grid(True, alpha=0.3)
+axes_perf[0].axhline(y=5, color='#d1242f', linestyle='--', alpha=0.7, label='Target Score')
+axes_perf[0].legend()
+axes_perf[0].tick_params(colors='black')
+
+# FID Score simulation
+fid_scores = 150 * np.exp(-epochs/40) + 10 + 5 * np.random.randn(100)
+fid_scores = np.clip(fid_scores, 5, 200)
+
+axes_perf[1].plot(epochs, fid_scores, linewidth=2, color='#8250df')
+axes_perf[1].set_xlabel('Epochs', color='black')
+axes_perf[1].set_ylabel('FID Score', color='black')
+axes_perf[1].set_title('FID Score Over Training (Lower is Better)', color='black')
+axes_perf[1].grid(True, alpha=0.3)
+axes_perf[1].axhline(y=20, color='#d1242f', linestyle='--', alpha=0.7, label='Good Score Threshold')
+axes_perf[1].legend()
+axes_perf[1].tick_params(colors='black')
+
+plt.tight_layout()
+plt.show()
+```
+
+## Tips for Successful GAN Training
+
+::: {.incremental}
+1. **Balance the Networks**: Similar capacity for G and D
+2. **Learning Rate Scheduling**: Careful tuning required
+3. **Batch Normalization**: Stabilizes training
+4. **Leaky ReLU**: Better gradients than standard ReLU
+5. **Feature Matching**: Alternative loss functions
+6. **Historical Averaging**: Prevent oscillations
+7. **Monitor Metrics**: Track IS, FID, visual quality
+:::
+
+## Resources and Next Steps
+
+::: {.columns}
+
+::: {.column width="50%"}
+### Further Reading
+- Original GAN Paper (Goodfellow et al., 2014)
+- DCGAN Paper (Radford et al., 2015)
+- Progressive GAN (Karras et al., 2017)
+- StyleGAN Series (Karras et al.)
+:::
+
+::: {.column width="50%"}
+### Practical Implementation
+- PyTorch GAN tutorials
+- TensorFlow GAN library
+- Papers with Code implementations
+- Kaggle competitions
+:::
+
+:::
+
+---
+
+## Key Takeaways
+- GANs learn through adversarial competition
+- Generator creates, Discriminator evaluates  
+- Applications span from art to data augmentation
+- Training requires careful balance and monitoring
+
+### Questions & Discussion
+
+
+# Appendix
+
+## Simple GAN Implementation
+
+```{python}
+#| echo: true
+#| eval: false
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import numpy as np
+
+class Generator(nn.Module):
+    def __init__(self, latent_dim, output_dim):
+        super(Generator, self).__init__()
+        self.model = nn.Sequential(
+            nn.Linear(latent_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, 256),
+            nn.ReLU(),
+            nn.Linear(256, output_dim),
+            nn.Tanh()
+        )
+    
+    def forward(self, z):
+        return self.model(z)
+
+class Discriminator(nn.Module):
+    def __init__(self, input_dim):
+        super(Discriminator, self).__init__()
+        self.model = nn.Sequential(
+            nn.Linear(input_dim, 256),
+            nn.LeakyReLU(0.2),
+            nn.Linear(256, 128),
+            nn.LeakyReLU(0.2),
+            nn.Linear(128, 1),
+            nn.Sigmoid()
+        )
+    
+    def forward(self, x):
+        return self.model(x)
+```
+
+## Training Process Demo
+
+```{python}
+#| echo: true
+#| eval: false
+# Initialize networks
+latent_dim = 100
+data_dim = 2
+
+generator = Generator(latent_dim, data_dim)
+discriminator = Discriminator(data_dim)
+
+# Optimizers
+lr = 0.0002
+g_optimizer = optim.Adam(generator.parameters(), lr=lr)
+d_optimizer = optim.Adam(discriminator.parameters(), lr=lr)
+
+# Loss function
+criterion = nn.BCELoss()
+
+# Training loop (simplified)
+def train_gan(epochs=1000):
+    for epoch in range(epochs):
+        # Train Discriminator
+        real_data = generate_real_samples()  # Your real data
+        fake_data = generator(torch.randn(batch_size, latent_dim))
+        
+        d_loss_real = criterion(discriminator(real_data), torch.ones(batch_size, 1))
+        d_loss_fake = criterion(discriminator(fake_data.detach()), torch.zeros(batch_size, 1))
+        d_loss = d_loss_real + d_loss_fake
+        
+        d_optimizer.zero_grad()
+        d_loss.backward()
+        d_optimizer.step()
+        
+        # Train Generator
+        fake_data = generator(torch.randn(batch_size, latent_dim))
+        g_loss = criterion(discriminator(fake_data), torch.ones(batch_size, 1))
+        
+        g_optimizer.zero_grad()
+        g_loss.backward()
+        g_optimizer.step()
+        
+        return d_loss.item(), g_loss.item()
+```
+## Code Structure for Practice
+
+```{python}
+#| echo: true
+#| eval: false
+# Complete GAN training pipeline
+class GANTrainer:
+    def __init__(self, generator, discriminator, device='cpu'):
+        self.generator = generator.to(device)
+        self.discriminator = discriminator.to(device)
+        self.device = device
+        
+        # Initialize optimizers
+        self.g_optimizer = optim.Adam(generator.parameters(), lr=0.0002, betas=(0.5, 0.999))
+        self.d_optimizer = optim.Adam(discriminator.parameters(), lr=0.0002, betas=(0.5, 0.999))
+        
+        self.criterion = nn.BCELoss()
+        
+    def train_step(self, real_data, batch_size, latent_dim):
+        # Training step implementation
+        device = self.device
+        
+        # Labels
+        real_labels = torch.ones(batch_size, 1).to(device)
+        fake_labels = torch.zeros(batch_size, 1).to(device)
+        
+        # Train Discriminator
+        self.discriminator.zero_grad()
+        
+        # Real data
+        real_output = self.discriminator(real_data)
+        d_loss_real = self.criterion(real_output, real_labels)
+        
+        # Fake data
+        noise = torch.randn(batch_size, latent_dim).to(device)
+        fake_data = self.generator(noise)
+        fake_output = self.discriminator(fake_data.detach())
+        d_loss_fake = self.criterion(fake_output, fake_labels)
+        
+        d_loss = d_loss_real + d_loss_fake
+        d_loss.backward()
+        self.d_optimizer.step()
+        
+        # Train Generator
+        self.generator.zero_grad()
+        fake_output = self.discriminator(fake_data)
+        g_loss = self.criterion(fake_output, real_labels)
+        g_loss.backward()
+        self.g_optimizer.step()
+        
+        return d_loss.item(), g_loss.item()
+```

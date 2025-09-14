@@ -532,6 +532,7 @@ def train_gan(epochs=1000):
         
         return d_loss.item(), g_loss.item()
 ```
+
 ## Code Structure for Practice
 
 ```{python}

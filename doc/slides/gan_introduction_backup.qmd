@@ -68,22 +68,6 @@ mean_fake_init = [0, 0]
 cov_fake_init = [[2.5, 0], [0, 2.5]]
 rv_fake_init = multivariate_normal(mean_fake_init, cov_fake_init)
 
-# Discriminator decision boundaries for each stage
-discriminator_boundaries = [
-    # Stage 1: Initial - discriminator easily separates
-    {"boundary": lambda x, y: 0.8 * x + 0.6 * y - 1.0, "confidence": 0.9},
-    # Stage 2: Early learning - boundary starts adapting
-    {"boundary": lambda x, y: 0.7 * x + 0.5 * y - 0.8, "confidence": 0.7},
-    # Stage 3: Mid learning - more complex boundary
-    {"boundary": lambda x, y: 0.6 * x + 0.4 * y - 0.5, "confidence": 0.6},
-    # Stage 4: Advanced learning - boundary becomes more sophisticated
-    {"boundary": lambda x, y: 0.5 * x + 0.3 * y - 0.3, "confidence": 0.5},
-    # Stage 5: Near convergence - very subtle boundary
-    {"boundary": lambda x, y: 0.4 * x + 0.2 * y - 0.1, "confidence": 0.4},
-    # Stage 6: Final - discriminator struggles (no clear boundary)
-    {"boundary": lambda x, y: 0.1 * x + 0.1 * y + 0.1, "confidence": 0.3}
-]
-
 # Learning stages - progressive improvement
 learning_stages = [
     # Stage 1: Initial (leftmost)
@@ -108,31 +92,15 @@ for i, stage in enumerate(learning_stages):
     
     rv_stage = multivariate_normal(stage["mean"], stage["cov"])
     
-    # Add discriminator decision boundary
-    disc_boundary = discriminator_boundaries[i]
-    Z_boundary = disc_boundary["boundary"](X, Y)
-    
     if i == 0:  # Initial generator (top-left) - no background
         ax.contour(X, Y, rv_stage.pdf(pos), colors=stage["color"], alpha=0.8, linewidths=2)
-        # Strong discriminator boundary
-        ax.contour(X, Y, Z_boundary, levels=[0], colors='black', alpha=0.8, linewidths=2, linestyles='-')
-        # Confidence region
-        ax.contourf(X, Y, Z_boundary, levels=[-10, 0], colors=['red'], alpha=0.1)
-        ax.contourf(X, Y, Z_boundary, levels=[0, 10], colors=['blue'], alpha=0.1)
     elif i == 5:  # Real data (bottom-right) - no background
         ax.contour(X, Y, rv_stage.pdf(pos), colors=stage["color"], alpha=0.9, linewidths=2)
-        # Very weak discriminator boundary (nearly random)
-        ax.contour(X, Y, Z_boundary, levels=[0], colors='gray', alpha=0.3, linewidths=1, linestyles='--')
     else:  # Middle stages - add real data as background
         # Add real data distribution as light background
         ax.contour(X, Y, rv_real.pdf(pos), colors='#0984e3', alpha=0.3, linewidths=1, linestyles='--')
         # Add current generator stage on top
         ax.contour(X, Y, rv_stage.pdf(pos), colors=stage["color"], alpha=0.8, linewidths=2)
-        # Discriminator boundary gets weaker over time
-        ax.contour(X, Y, Z_boundary, levels=[0], colors='black', alpha=disc_boundary["confidence"], linewidths=2)
-        # Confidence regions
-        ax.contourf(X, Y, Z_boundary, levels=[-10, 0], colors=['red'], alpha=0.05)
-        ax.contourf(X, Y, Z_boundary, levels=[0, 10], colors=['blue'], alpha=0.05)
     
     ax.set_title(stage["title"], color='black', fontsize=12)
     ax.set_xlim(-1, 5)
@@ -146,17 +114,135 @@ for i, stage in enumerate(learning_stages):
     if row == 1:  # Bottom row
         ax.set_xlabel('X1', color='black', fontsize=10)
 
-# Add legend for discriminator boundaries
-from matplotlib.lines import Line2D
-legend_elements = [
-    Line2D([0], [0], color='black', lw=2, label='Discriminator Boundary'),
-    Line2D([0], [0], color='red', lw=0, marker='s', markersize=10, alpha=0.3, label='Fake Region'),
-    Line2D([0], [0], color='blue', lw=0, marker='s', markersize=10, alpha=0.3, label='Real Region')
+plt.tight_layout()
+plt.subplots_adjust(wspace=0.1)
+plt.show()
+```
+
+## Contrastive Learning in GANs
+
+```{python}
+#| echo: false
+#| fig-width: 16
+#| fig-height: 8
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.stats import multivariate_normal
+
+# Create visualization for contrastive learning data distributions
+fig, axes = plt.subplots(2, 4, figsize=(16, 8))
+
+# Define different data modalities/classes for contrastive learning
+classes = [
+    {"mean": [1, 1], "cov": [[0.3, 0.1], [0.1, 0.3]], "color": "#e74c3c", "label": "Class A"},
+    {"mean": [3, 1], "cov": [[0.3, -0.1], [-0.1, 0.3]], "color": "#3498db", "label": "Class B"},
+    {"mean": [1, 3], "cov": [[0.3, 0.1], [0.1, 0.3]], "color": "#2ecc71", "label": "Class C"},
+    {"mean": [3, 3], "cov": [[0.3, -0.1], [-0.1, 0.3]], "color": "#f39c12", "label": "Class D"}
 ]
-fig.legend(handles=legend_elements, loc='upper center', bbox_to_anchor=(0.5, 0.02), ncol=3, fontsize=10)
+
+x = np.linspace(-0.5, 4.5, 100)
+y = np.linspace(-0.5, 4.5, 100)
+X, Y = np.meshgrid(x, y)
+pos = np.dstack((X, Y))
+
+# Row 1: Original Data Distributions
+axes[0, 0].set_title("Original Data\n(Separated Classes)", fontsize=12, color='black')
+for cls in classes:
+    rv = multivariate_normal(cls["mean"], cls["cov"])
+    axes[0, 0].contour(X, Y, rv.pdf(pos), colors=cls["color"], alpha=0.8, linewidths=2)
+    # Add class labels
+    axes[0, 0].text(cls["mean"][0], cls["mean"][1], cls["label"], 
+                   fontsize=10, ha='center', va='center', color='white', 
+                   bbox=dict(boxstyle='round,pad=0.3', facecolor=cls["color"], alpha=0.8))
+axes[0, 0].set_xlim(-0.5, 4.5)
+axes[0, 0].set_ylim(-0.5, 4.5)
+axes[0, 0].grid(True, alpha=0.3)
+axes[0, 0].tick_params(colors='black')
+
+# Row 1: Positive Pairs (Similar samples)
+axes[0, 1].set_title("Positive Pairs\n(Similar Samples)", fontsize=12, color='black')
+for i, cls in enumerate(classes):
+    rv = multivariate_normal(cls["mean"], cls["cov"])
+    axes[0, 1].contour(X, Y, rv.pdf(pos), colors=cls["color"], alpha=0.6, linewidths=2)
+    # Show connections between similar samples
+    if i < 2:  # Connect first two classes with lines
+        axes[0, 1].plot([cls["mean"][0]-0.2, cls["mean"][0]+0.2], 
+                       [cls["mean"][1]-0.2, cls["mean"][1]+0.2], 
+                       color=cls["color"], linewidth=3, alpha=0.8)
+axes[0, 1].set_xlim(-0.5, 4.5)
+axes[0, 1].set_ylim(-0.5, 4.5)
+axes[0, 1].grid(True, alpha=0.3)
+axes[0, 1].tick_params(colors='black')
+
+# Row 1: Negative Pairs (Dissimilar samples)
+axes[0, 2].set_title("Negative Pairs\n(Dissimilar Samples)", fontsize=12, color='black')
+for cls in classes:
+    rv = multivariate_normal(cls["mean"], cls["cov"])
+    axes[0, 2].contour(X, Y, rv.pdf(pos), colors=cls["color"], alpha=0.6, linewidths=2)
+# Show repulsion between different classes
+axes[0, 2].annotate('', xy=(3, 3), xytext=(1, 1), 
+                   arrowprops=dict(arrowstyle='<->', color='red', lw=2))
+axes[0, 2].annotate('', xy=(3, 1), xytext=(1, 3), 
+                   arrowprops=dict(arrowstyle='<->', color='red', lw=2))
+axes[0, 2].text(2, 2, 'Push\nApart', ha='center', va='center', color='red', fontweight='bold')
+axes[0, 2].set_xlim(-0.5, 4.5)
+axes[0, 2].set_ylim(-0.5, 4.5)
+axes[0, 2].grid(True, alpha=0.3)
+axes[0, 2].tick_params(colors='black')
+
+# Row 1: Learned Representation
+axes[0, 3].set_title("Learned Representation\n(Contrastive)", fontsize=12, color='black')
+# Show more separated, tighter clusters
+enhanced_classes = [
+    {"mean": [0.5, 0.5], "cov": [[0.15, 0], [0, 0.15]], "color": "#e74c3c"},
+    {"mean": [3.5, 0.5], "cov": [[0.15, 0], [0, 0.15]], "color": "#3498db"},
+    {"mean": [0.5, 3.5], "cov": [[0.15, 0], [0, 0.15]], "color": "#2ecc71"},
+    {"mean": [3.5, 3.5], "cov": [[0.15, 0], [0, 0.15]], "color": "#f39c12"}
+]
+for cls in enhanced_classes:
+    rv = multivariate_normal(cls["mean"], cls["cov"])
+    axes[0, 3].contour(X, Y, rv.pdf(pos), colors=cls["color"], alpha=0.9, linewidths=3)
+axes[0, 3].set_xlim(-0.5, 4.5)
+axes[0, 3].set_ylim(-0.5, 4.5)
+axes[0, 3].grid(True, alpha=0.3)
+axes[0, 3].tick_params(colors='black')
+
+# Row 2: GAN Training Stages with Contrastive Learning
+contrastive_stages = [
+    {"title": "Initial Generator\n(Random)", "separation": 0.1, "tightness": 0.8},
+    {"title": "Early Training\n(Weak Separation)", "separation": 0.3, "tightness": 0.6},
+    {"title": "Mid Training\n(Better Clustering)", "separation": 0.6, "tightness": 0.4},
+    {"title": "Final Training\n(Sharp Clusters)", "separation": 1.0, "tightness": 0.2}
+]
+
+for i, stage in enumerate(contrastive_stages):
+    ax = axes[1, i]
+    ax.set_title(stage["title"], fontsize=12, color='black')
+    
+    # Generate class distributions with increasing separation and tightness
+    for j, base_cls in enumerate(classes):
+        # Adjust mean positions for separation
+        adjusted_mean = [
+            base_cls["mean"][0] + (j % 2 - 0.5) * stage["separation"],
+            base_cls["mean"][1] + (j // 2 - 0.5) * stage["separation"]
+        ]
+        # Adjust covariance for tightness
+        adjusted_cov = [[stage["tightness"], 0], [0, stage["tightness"]]]
+        
+        rv = multivariate_normal(adjusted_mean, adjusted_cov)
+        ax.contour(X, Y, rv.pdf(pos), colors=base_cls["color"], alpha=0.8, linewidths=2)
+    
+    ax.set_xlim(-0.5, 4.5)
+    ax.set_ylim(-0.5, 4.5)
+    ax.grid(True, alpha=0.3)
+    ax.tick_params(colors='black')
+    
+    # Add labels to bottom row
+    if i == 0:
+        ax.set_ylabel('Feature Dimension 2', color='black', fontsize=10)
+    ax.set_xlabel('Feature Dimension 1', color='black', fontsize=10)
 
 plt.tight_layout()
-plt.subplots_adjust(wspace=0.1, bottom=0.1)
 plt.show()
 ```
 
