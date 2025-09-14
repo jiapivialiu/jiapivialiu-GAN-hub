@@ -276,6 +276,11 @@ _site/
 # fig/
 # doc/slides/gan_introduction_files/
 
+# GitHub Pages files - keep these for sharing
+!index.html
+!gan_introduction_files/
+!styles.css
+
 # Local configuration files
 config.local.py
 settings.local.py

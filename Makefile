@@ -13,10 +13,21 @@ all: slides
 .PHONY: slides
 slides:
 	@echo "Building Quarto presentation..."
-	@mkdir -p $(OUTPUT_DIR)
 	@if [ ! -d "gan-env" ]; then echo "Virtual environment not found. Run 'make install-deps' first."; exit 1; fi
 	cd $(SLIDES_DIR) && QUARTO_PYTHON=../../gan-env/bin/python quarto render $(SLIDES_FILE) --to revealjs
 	@echo "Slides built successfully!"
+
+# Build slides for GitHub Pages (copies to root directory)
+.PHONY: github-pages
+github-pages:
+	@echo "Building slides for GitHub Pages..."
+	@if [ ! -d "gan-env" ]; then echo "Virtual environment not found. Run 'make install-deps' first."; exit 1; fi
+	cd $(SLIDES_DIR) && QUARTO_PYTHON=../../gan-env/bin/python quarto render $(SLIDES_FILE) --to revealjs
+	@echo "Copying slides to root directory for GitHub Pages..."
+	cp $(SLIDES_DIR)/gan_introduction.html ./index.html
+	cp -r $(SLIDES_DIR)/gan_introduction_files ./gan_introduction_files 2>/dev/null || true
+	cp $(SLIDES_DIR)/styles.css ./styles.css 2>/dev/null || true
+	@echo "GitHub Pages setup completed! Your slides will be available at: https://jiapivialiu.github.io/jiapivialiu-GAN-hub/"
 
 # Preview the slides (opens in browser)
 .PHONY: preview
@@ -70,6 +81,7 @@ activate:
 help:
 	@echo "Available targets:"
 	@echo "  slides       - Build the presentation"
+	@echo "  github-pages - Build slides and copy to root for GitHub Pages"
 	@echo "  preview      - Preview slides in browser"
 	@echo "  clean        - Remove output files"
 	@echo "  clean-all    - Remove output files and virtual environment"
