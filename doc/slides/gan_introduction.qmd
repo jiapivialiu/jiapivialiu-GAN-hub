@@ -40,11 +40,14 @@ jupyter: python3
 
 ```{python}
 #| echo: false
-#| fig-width: 16
-#| fig-height: 6
+#| output: false
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import multivariate_normal
+import os
+
+# Create images directory if it doesn't exist
+os.makedirs('images', exist_ok=True)
 
 # Configure matplotlib for light theme
 plt.style.use('default')
@@ -157,8 +160,12 @@ fig.legend(handles=legend_elements, loc='upper center', bbox_to_anchor=(0.5, 0.0
 
 plt.tight_layout()
 plt.subplots_adjust(wspace=0.1, bottom=0.1)
-plt.show()
+plt.savefig('images/gan_learning_progression.png', dpi=150, bbox_inches='tight', 
+            facecolor='white', edgecolor='none')
+plt.close()
 ```
+
+![GAN Learning Progression](images/gan_learning_progression.png)
 
 ## GAN Architecture
 
@@ -199,8 +206,7 @@ Where:
 
 ```{python}
 #| echo: false
-#| fig-width: 10
-#| fig-height: 6
+#| output: false
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -226,16 +232,19 @@ ax_game.legend()
 ax_game.grid(True, alpha=0.3)
 ax_game.tick_params(colors='black')
 plt.tight_layout()
-plt.show()
+plt.savefig('images/gan_training_dynamics.png', dpi=150, bbox_inches='tight',
+            facecolor='white', edgecolor='none')
+plt.close()
 ```
+
+![GAN Training Dynamics](images/gan_training_dynamics.png)
 
 
 ## Applications
 
 ```{python}
 #| echo: false
-#| fig-width: 12
-#| fig-height: 6
+#| output: false
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -287,11 +296,13 @@ axes[1, 1].imshow(transfer_result, cmap='plasma')
 axes[1, 1].set_title('Style Transfer Result', color='black')
 axes[1, 1].axis('off')
 
-#axes[0, 1].legend()
-#axes[0, 1].grid(True, alpha=0.3)
 plt.tight_layout()
-plt.show()
+plt.savefig('images/gan_applications.png', dpi=150, bbox_inches='tight',
+            facecolor='white', edgecolor='none')
+plt.close()
 ```
+
+![GAN Applications](images/gan_applications.png)
 
 ## Training Challenges
 
@@ -305,8 +316,7 @@ plt.show()
 ::: {.fragment}
 ```{python}
 #| echo: false
-#| fig-width: 12
-#| fig-height: 4
+#| output: false
 # Demonstrate mode collapse
 fig_mode, axes_mode = plt.subplots(1, 2, figsize=(12, 4))
 
@@ -330,8 +340,12 @@ axes_mode[1].grid(True, alpha=0.3)
 axes_mode[1].tick_params(colors='black')
 
 plt.tight_layout()
-plt.show()
+plt.savefig('images/mode_collapse_demo.png', dpi=150, bbox_inches='tight',
+            facecolor='white', edgecolor='none')
+plt.close()
 ```
+
+![Mode Collapse Demonstration](images/mode_collapse_demo.png)
 :::
 
 ## GAN Variants
@@ -360,8 +374,7 @@ plt.show()
 
 ```{python}
 #| echo: false
-#| fig-width: 14
-#| fig-height: 4
+#| output: false
 # Metrics for GAN evaluation
 import matplotlib.pyplot as plt
 import numpy as np
@@ -396,8 +409,12 @@ axes_perf[1].legend()
 axes_perf[1].tick_params(colors='black')
 
 plt.tight_layout()
-plt.show()
+plt.savefig('images/performance_metrics.png', dpi=150, bbox_inches='tight',
+            facecolor='white', edgecolor='none')
+plt.close()
 ```
+
+![Performance Metrics](images/performance_metrics.png)
 
 ## Tips for Successful GAN Training
 
