@@ -1,0 +1,165 @@
+# Default Configuration for GAN-Based Stress Testing
+# This file contains all the default parameters for the stress testing pipeline
+
+# Project Settings
+project_name: "GAN_Stress_Testing"
+random_seed: 42
+log_level: "INFO"
+
+# Paths
+model_save_path: "outputs/models/"
+results_save_path: "outputs/results/"
+logs_path: "logs/"
+
+# Computing Resources
+device: "auto"  # 'auto', 'cpu', 'cuda'
+num_workers: 4
+
+# Data Configuration
+data:
+  # Data paths
+  raw_data_path: "data/raw/"
+  processed_data_path: "data/processed/"
+  synthetic_data_path: "data/synthetic/"
+  
+  # Feature configuration
+  numerical_features:
+    - "age"
+    - "income"
+    - "debt_to_income"
+    - "credit_score"
+    - "loan_amount"
+    - "employment_length"
+    - "home_ownership_encoded"
+  
+  categorical_features:
+    - "purpose"
+    - "grade"
+    - "emp_title_category"
+  
+  target_feature: "default_flag"
+  
+  # Data processing parameters
+  train_test_split: 0.8
+  validation_split: 0.2
+  random_state: 42
+  
+  # Preprocessing options
+  normalize_features: true
+  handle_missing: "median"  # 'mean', 'median', 'mode', 'drop'
+  outlier_method: "iqr"  # 'iqr', 'zscore', 'isolation_forest'
+  outlier_threshold: 3.0
+
+# Macroeconomic Configuration
+macro:
+  # Baseline scenario (normal economic conditions)
+  baseline_scenario:
+    gdp_growth: 2.0
+    unemployment_rate: 5.0
+    interest_rate: 3.0
+    inflation_rate: 2.5
+    house_price_index: 100.0
+  
+  # Stress scenarios
+  stress_scenarios:
+    adverse:
+      gdp_growth: -2.0
+      unemployment_rate: 8.5
+      interest_rate: 1.0
+      inflation_rate: 1.0
+      house_price_index: 85.0
+    
+    severely_adverse:
+      gdp_growth: -4.0
+      unemployment_rate: 12.0
+      interest_rate: 0.5
+      inflation_rate: 0.5
+      house_price_index: 70.0
+  
+  # List of macro variables (should match scenario keys)
+  macro_variables:
+    - "gdp_growth"
+    - "unemployment_rate"
+    - "interest_rate"
+    - "inflation_rate"
+    - "house_price_index"
+
+# Conditional GAN Configuration
+gan:
+  # Architecture parameters
+  generator_layers: [256, 512, 512, 256]
+  discriminator_layers: [256, 512, 256, 128]
+  latent_dim: 100
+  condition_dim: 5  # Number of macro variables
+  
+  # Training parameters
+  batch_size: 256
+  num_epochs: 1000
+  learning_rate_generator: 0.0002
+  learning_rate_discriminator: 0.0002
+  beta1: 0.5
+  beta2: 0.999
+  
+  # Training schedule
+  discriminator_steps: 1
+  generator_steps: 1
+  
+  # Regularization
+  dropout_rate: 0.3
+  weight_decay: 0.00001
+  gradient_penalty_weight: 10.0
+  
+  # Early stopping
+  patience: 50
+  min_delta: 0.0001
+
+# PD Model Configuration
+pd_model:
+  # Model types to train
+  model_types:
+    - "logistic"
+    - "gradient_boosting"
+    - "macro_conditioned"
+  
+  # Logistic regression parameters
+  logistic_max_iter: 1000
+  logistic_C: 1.0
+  logistic_solver: "liblinear"
+  
+  # Gradient boosting parameters
+  gb_n_estimators: 100
+  gb_max_depth: 6
+  gb_learning_rate: 0.1
+  gb_subsample: 0.8
+  gb_random_state: 42
+  
+  # Cross-validation
+  cv_folds: 5
+  scoring_metric: "roc_auc"
+
+# Evaluation Configuration
+evaluation:
+  # Metrics to compute
+  compute_ks_test: true
+  compute_wasserstein: true
+  compute_correlation_preservation: true
+  compute_mode_collapse: true
+  
+  # Stress testing metrics
+  compute_pd_shift: true
+  compute_ecl_impact: true
+  compute_capital_impact: true
+  compute_scenario_discrimination: true
+  
+  # ECL parameters
+  lgd: 0.45  # Loss Given Default
+  current_capital_ratio: 0.12
+  
+  # Thresholds
+  ks_significance_level: 0.05
+  mode_collapse_threshold: 0.1
+  
+  # Plotting
+  save_plots: true
+  plot_format: "png"
+  plot_dpi: 300
