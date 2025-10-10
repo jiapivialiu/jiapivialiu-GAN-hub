@@ -2,7 +2,7 @@
 title: "Introduction to Generative Adversarial Networks"
 subtitle: "Understanding GANs with Python Implementation"
 author: "Jiaping(Olivia) Liu"
-date: "September 14, 2025"
+date: "October 10, 2025"
 format:
   revealjs:
     theme: simple
@@ -17,6 +17,16 @@ format:
     fig-width: 10
     fig-height: 4
     fig-dpi: 150
+  pdf:
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    colorlinks: true
+    geometry:
+      - margin=1in
+    fig-width: 7
+    fig-height: 4
+    fig-dpi: 300
 execute:
   echo: true
   warning: false
@@ -196,10 +206,11 @@ The GAN objective function:
 $$\min_G \max_D V(D,G) = \mathbb{E}_{x \sim p_{data}(x)}[\log D(x)] + \mathbb{E}_{z \sim p_z(z)}[\log(1 - D(G(z)))]$$
 
 Where:
-- $G$ = Generator network
-- $D$ = Discriminator network  
-- $x$ = Real data samples
-- $z$ = Random noise vector
+
+- G: Generator network
+- D: Discriminator network  
+- x: Real data samples
+- z: Random noise vector
 
 
 ## The GAN Game Theory
@@ -368,6 +379,140 @@ plt.close()
 - **Self-Attention GAN**: SAGAN
 :::
 
+:::
+
+## Conditional GAN (cGAN)
+
+### What is Conditional GAN?
+
+::: {.incremental}
+- **Extension of vanilla GAN** with conditional information
+- Both Generator and Discriminator receive **additional input** (labels, attributes, etc.)
+- Enables **controlled generation** of specific outputs
+- First introduced by Mirza & Osindero (2014)
+:::
+
+
+### Architecture & Training
+
+::: {.incremental}
+**Generator**: $G(z, y)$
+
+- Input: Random noise $z$ + condition $y$
+- Output: Fake sample $x_{fake}$
+- Learns: $P(x|y)$ distribution
+
+**Discriminator**: $D(x, y)$
+
+- Input: Sample $x$ + condition $y$
+- Output: Probability of being real
+- Learns to distinguish real/fake given condition
+:::
+
+## How Training & Generation Works
+
+::: {.incremental}
+**During Training:**
+
+- Real data comes with labels: $(x_{real}, y_{real})$
+- Example: (image of cat, label = "cat"), (image of dog, label = "dog")
+- Condition $y$ is **given from the dataset**
+- Generator learns: "When $y$ = cat, generate cat images"
+
+**During Generation (Inference):**
+
+- You **manually specify** the condition $y$
+- Want a cat? Set $y$ = "cat" + random noise $z$ → $G(z, y)$ generates cat
+- Want a dog? Set $y$ = "dog" + random noise $z$ → $G(z, y)$ generates dog
+- **Full control** over what to generate!
+:::
+
+## Conditional GAN Objective
+
+Modified objective function with conditioning:
+
+$$\min_G \max_D V(D,G) = \mathbb{E}_{x \sim p_{data}(x)}[\log D(x|y)] + \mathbb{E}_{z \sim p_z(z)}[\log(1 - D(G(z|y)))]$$
+
+Where $y$ represents the conditional information (class labels, attributes, text descriptions, etc.)
+
+## Applications of cGAN
+
+::: {.incremental}
+1. **Text-to-Image**: Generate images from text descriptions
+2. **Class-Conditional Generation**: Generate specific object classes (e.g., MNIST digits 0-9)
+3. **Image-to-Image Translation**: Pix2Pix - edges to photos, sketches to realistic images
+4. **Super-Resolution**: Generate high-res images conditioned on low-res input
+5. **Style Transfer**: Transfer artistic style while preserving content
+6. **Data Augmentation**: Generate labeled synthetic data for training
+:::
+
+## Example: MNIST Conditional Generation
+
+```{python}
+#| echo: false
+#| output: false
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Configure matplotlib
+plt.style.use('default')
+plt.rcParams['figure.facecolor'] = 'white'
+plt.rcParams['axes.facecolor'] = 'white'
+
+# Simulate conditional generation - different digit classes
+fig, axes = plt.subplots(2, 5, figsize=(12, 5))
+fig.suptitle('Conditional GAN: Generating Specific Digit Classes', fontsize=14, color='black')
+
+# Simulate 10 different digit classes (0-9)
+np.random.seed(42)
+for idx in range(10):
+    row = idx // 5
+    col = idx % 5
+    ax = axes[row, col]
+    
+    # Create a simple synthetic "digit" pattern for each class
+    digit_image = np.zeros((28, 28))
+    
+    # Create different patterns for different digits
+    if idx == 0:  # Circle for 0
+        y, x = np.ogrid[-14:14, -14:14]
+        mask = (x**2 + y**2 <= 100) & (x**2 + y**2 >= 64)
+        digit_image[mask] = 1
+    elif idx == 1:  # Vertical line for 1
+        digit_image[5:23, 12:16] = 1
+    elif idx == 2:  # Wavy pattern for 2
+        for i in range(28):
+            j = int(14 + 8 * np.sin(i * 0.3))
+            if 0 <= j < 28:
+                digit_image[i, max(0, j-1):min(28, j+2)] = 1
+    else:  # Random patterns for others
+        digit_image = np.random.rand(28, 28) > 0.7
+        digit_image = digit_image.astype(float)
+    
+    # Add noise
+    digit_image += np.random.randn(28, 28) * 0.1
+    digit_image = np.clip(digit_image, 0, 1)
+    
+    ax.imshow(digit_image, cmap='gray')
+    ax.set_title(f'Class: {idx}', fontsize=10, color='black')
+    ax.axis('off')
+
+plt.tight_layout()
+plt.savefig('images/conditional_gan_demo.png', dpi=150, bbox_inches='tight',
+            facecolor='white', edgecolor='none')
+plt.close()
+```
+
+![Conditional GAN Example](images/conditional_gan_demo.png)
+
+## Key Advantages
+
+::: {.incremental}
+- ✅ **Control**: Generate samples with specific attributes
+- ✅ **Flexibility**: Condition on various types of information
+- ✅ **Quality**: Often better quality than vanilla GAN
+- ✅ **Interpretability**: Easier to understand what's being generated
+- ✅ **Practical**: More applicable to real-world tasks
 :::
 
 ## Performance Evaluation
