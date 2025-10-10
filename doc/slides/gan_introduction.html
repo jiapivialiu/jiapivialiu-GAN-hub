@@ -10,7 +10,7 @@
   <meta name="generator" content="quarto-1.8.24">
 
   <meta name="author" content="Jiaping(Olivia) Liu">
-  <meta name="dcterms.date" content="2025-09-14">
+  <meta name="dcterms.date" content="2025-10-10">
   <title>Introduction to Generative Adversarial Networks</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -208,7 +208,7 @@ Jiaping(Olivia) Liu
 </div>
 </div>
 
-  <p class="date">2025-09-14</p>
+  <p class="date">2025-10-10</p>
 </section>
 <section id="what-are-gans" class="slide level2">
 <h2>What are GANs?</h2>
@@ -250,8 +250,14 @@ Jiaping(Olivia) Liu
 <h2>Mathematical Foundation</h2>
 <p>The GAN objective function:</p>
 <p><span class="math display">\[\min_G \max_D V(D,G) = \mathbb{E}_{x \sim p_{data}(x)}[\log D(x)] + \mathbb{E}_{z \sim p_z(z)}[\log(1 - D(G(z)))]\]</span></p>
-<p>Where: - <span class="math inline">\(G\)</span> = Generator network - <span class="math inline">\(D\)</span> = Discriminator network<br>
-- <span class="math inline">\(x\)</span> = Real data samples - <span class="math inline">\(z\)</span> = Random noise vector</p>
+<p>Where:</p>
+<ul>
+<li>G: Generator network</li>
+<li>D: Discriminator network<br>
+</li>
+<li>x: Real data samples</li>
+<li>z: Random noise vector</li>
+</ul>
 </section>
 <section id="the-gan-game-theory" class="slide level2">
 <h2>The GAN Game Theory</h2>
@@ -298,6 +304,77 @@ Jiaping(Olivia) Liu
 <li><strong>Self-Attention GAN</strong>: SAGAN</li>
 </ul>
 </div></div>
+</section>
+<section id="conditional-gan-cgan" class="slide level2">
+<h2>Conditional GAN (cGAN)</h2>
+<h3 id="what-is-conditional-gan">What is Conditional GAN?</h3>
+<ul>
+<li class="fragment"><strong>Extension of vanilla GAN</strong> with conditional information</li>
+<li class="fragment">Both Generator and Discriminator receive <strong>additional input</strong> (labels, attributes, etc.)</li>
+<li class="fragment">Enables <strong>controlled generation</strong> of specific outputs</li>
+<li class="fragment">First introduced by Mirza &amp; Osindero (2014)</li>
+</ul>
+<h3 id="architecture-training">Architecture &amp; Training</h3>
+<p><strong>Generator</strong>: <span class="math inline">\(G(z, y)\)</span></p>
+<ul>
+<li class="fragment">Input: Random noise <span class="math inline">\(z\)</span> + condition <span class="math inline">\(y\)</span></li>
+<li class="fragment">Output: Fake sample <span class="math inline">\(x_{fake}\)</span></li>
+<li class="fragment">Learns: <span class="math inline">\(P(x|y)\)</span> distribution</li>
+</ul>
+<p><strong>Discriminator</strong>: <span class="math inline">\(D(x, y)\)</span></p>
+<ul>
+<li class="fragment">Input: Sample <span class="math inline">\(x\)</span> + condition <span class="math inline">\(y\)</span></li>
+<li class="fragment">Output: Probability of being real</li>
+<li class="fragment">Learns to distinguish real/fake given condition</li>
+</ul>
+</section>
+<section id="how-training-generation-works" class="slide level2">
+<h2>How Training &amp; Generation Works</h2>
+<p><strong>During Training:</strong></p>
+<ul>
+<li class="fragment">Real data comes with labels: <span class="math inline">\((x_{real}, y_{real})\)</span></li>
+<li class="fragment">Example: (image of cat, label = “cat”), (image of dog, label = “dog”)</li>
+<li class="fragment">Condition <span class="math inline">\(y\)</span> is <strong>given from the dataset</strong></li>
+<li class="fragment">Generator learns: “When <span class="math inline">\(y\)</span> = cat, generate cat images”</li>
+</ul>
+<p><strong>During Generation (Inference):</strong></p>
+<ul>
+<li class="fragment">You <strong>manually specify</strong> the condition <span class="math inline">\(y\)</span></li>
+<li class="fragment">Want a cat? Set <span class="math inline">\(y\)</span> = “cat” + random noise <span class="math inline">\(z\)</span> → <span class="math inline">\(G(z, y)\)</span> generates cat</li>
+<li class="fragment">Want a dog? Set <span class="math inline">\(y\)</span> = “dog” + random noise <span class="math inline">\(z\)</span> → <span class="math inline">\(G(z, y)\)</span> generates dog</li>
+<li class="fragment"><strong>Full control</strong> over what to generate!</li>
+</ul>
+</section>
+<section id="conditional-gan-objective" class="slide level2">
+<h2>Conditional GAN Objective</h2>
+<p>Modified objective function with conditioning:</p>
+<p><span class="math display">\[\min_G \max_D V(D,G) = \mathbb{E}_{x \sim p_{data}(x)}[\log D(x|y)] + \mathbb{E}_{z \sim p_z(z)}[\log(1 - D(G(z|y)))]\]</span></p>
+<p>Where <span class="math inline">\(y\)</span> represents the conditional information (class labels, attributes, text descriptions, etc.)</p>
+</section>
+<section id="applications-of-cgan" class="slide level2">
+<h2>Applications of cGAN</h2>
+<ol type="1">
+<li class="fragment"><strong>Text-to-Image</strong>: Generate images from text descriptions</li>
+<li class="fragment"><strong>Class-Conditional Generation</strong>: Generate specific object classes (e.g., MNIST digits 0-9)</li>
+<li class="fragment"><strong>Image-to-Image Translation</strong>: Pix2Pix - edges to photos, sketches to realistic images</li>
+<li class="fragment"><strong>Super-Resolution</strong>: Generate high-res images conditioned on low-res input</li>
+<li class="fragment"><strong>Style Transfer</strong>: Transfer artistic style while preserving content</li>
+<li class="fragment"><strong>Data Augmentation</strong>: Generate labeled synthetic data for training</li>
+</ol>
+</section>
+<section id="example-mnist-conditional-generation" class="slide level2">
+<h2>Example: MNIST Conditional Generation</h2>
+
+<img data-src="images/conditional_gan_demo.png" class="r-stretch quarto-figure-center"><p class="caption">Conditional GAN Example</p></section>
+<section id="key-advantages" class="slide level2">
+<h2>Key Advantages</h2>
+<ul>
+<li class="fragment">✅ <strong>Control</strong>: Generate samples with specific attributes</li>
+<li class="fragment">✅ <strong>Flexibility</strong>: Condition on various types of information</li>
+<li class="fragment">✅ <strong>Quality</strong>: Often better quality than vanilla GAN</li>
+<li class="fragment">✅ <strong>Interpretability</strong>: Easier to understand what’s being generated</li>
+<li class="fragment">✅ <strong>Practical</strong>: More applicable to real-world tasks</li>
+</ul>
 </section>
 <section id="performance-evaluation" class="slide level2">
 <h2>Performance Evaluation</h2>
@@ -354,7 +431,7 @@ Jiaping(Olivia) Liu
 </section>
 <section id="simple-gan-implementation" class="slide level2">
 <h2>Simple GAN Implementation</h2>
-<div id="d70f8196" class="cell" data-execution_count="6">
+<div id="0f413c8e" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href=""></a><span class="im">import</span> torch</span>
 <span id="cb1-2"><a href=""></a><span class="im">import</span> torch.nn <span class="im">as</span> nn</span>
 <span id="cb1-3"><a href=""></a><span class="im">import</span> torch.optim <span class="im">as</span> optim</span>
@@ -393,7 +470,7 @@ Jiaping(Olivia) Liu
 </section>
 <section id="training-process-demo" class="slide level2">
 <h2>Training Process Demo</h2>
-<div id="f7ee2ae6" class="cell" data-execution_count="7">
+<div id="a7053814" class="cell" data-execution_count="8">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href=""></a><span class="co"># Initialize networks</span></span>
 <span id="cb2-2"><a href=""></a>latent_dim <span class="op">=</span> <span class="dv">100</span></span>
 <span id="cb2-3"><a href=""></a>data_dim <span class="op">=</span> <span class="dv">2</span></span>
@@ -437,7 +514,7 @@ Jiaping(Olivia) Liu
 </section>
 <section id="code-structure-for-practice" class="slide level2">
 <h2>Code Structure for Practice</h2>
-<div id="99a910cc" class="cell" data-execution_count="8">
+<div id="42533398" class="cell" data-execution_count="9">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href=""></a><span class="co"># Complete GAN training pipeline</span></span>
 <span id="cb3-2"><a href=""></a><span class="kw">class</span> GANTrainer:</span>
 <span id="cb3-3"><a href=""></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, generator, discriminator, device<span class="op">=</span><span class="st">'cpu'</span>):</span>
